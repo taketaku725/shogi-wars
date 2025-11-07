@@ -50,20 +50,35 @@ function loadLocal(){
 
 // ====== レイアウト（トップバー見切れ防止） ======
 function fitBoardToViewport(){
-  const style = getComputedStyle(document.documentElement);
-  const topbarH  = parseInt(style.getPropertyValue("--topbar-h"))  || 40;
-  const handsH   = parseInt(style.getPropertyValue("--hands-h"))   || 58;
-  const boardPad = parseInt(style.getPropertyValue("--board-pad")) || 8;
-  const gridGap  = parseInt(style.getPropertyValue("--grid-gap"))  || 2;
+  const cs = getComputedStyle(document.documentElement);
+  const topbarH  = parseInt(cs.getPropertyValue("--topbar-h"))  || 40;
+  const handsH   = parseInt(cs.getPropertyValue("--hands-h"))   || 58;
+  const boardPad = parseInt(cs.getPropertyValue("--board-pad")) || 8;
+  const gridGap  = parseInt(cs.getPropertyValue("--grid-gap"))  || 2;
+  const sideW    = parseInt(cs.getPropertyValue("--komadai-side-w")) || 120;
 
   const vw = window.innerWidth, vh = window.innerHeight;
-  const verticalAvail = Math.max(140, vh - topbarH - (handsH * 2) - 8);
   const overhead = (boardPad * 2) + (gridGap * 8);
-  const squareFromH = Math.floor((verticalAvail - overhead) / 9);
-  const squareFromW = Math.floor((vw - 16 - overhead) / 9);
-  const square = Math.max(16, Math.min(squareFromH, squareFromW)); // 最小16px
+
+  let squareFromH, squareFromW;
+
+  if (window.matchMedia("(orientation: landscape)").matches){
+    // 横画面：左右の駒台を除いた幅・トップバーを除いた高さで計算
+    const availW = Math.max(140, vw - sideW*2 - 16 - overhead);
+    const availH = Math.max(140, vh - topbarH - 8 - overhead);
+    squareFromW = Math.floor(availW / 9);
+    squareFromH = Math.floor(availH / 9);
+  }else{
+    // 縦画面：上下の駒台＆トップバーを除いた高さで計算（従来）
+    const verticalAvail = Math.max(140, vh - topbarH - (handsH * 2) - 8);
+    squareFromH = Math.floor((verticalAvail - overhead) / 9);
+    squareFromW = Math.floor((vw - 16 - overhead) / 9);
+  }
+
+  const square = Math.max(16, Math.min(squareFromH, squareFromW));
   document.documentElement.style.setProperty("--squarepx", square + "px");
 }
+
 window.addEventListener("resize", fitBoardToViewport);
 window.addEventListener("orientationchange", fitBoardToViewport);
 
@@ -438,4 +453,5 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
+
 
