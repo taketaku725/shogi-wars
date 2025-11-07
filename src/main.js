@@ -425,9 +425,9 @@ function boot(){
 
   // 起動
   loadLocal();
+  showTitle();
   fitBoardToViewport();
   render();
-  showTitle();
 
   // デバッグログ（必要なければ消してOK）
   // console.log("[wire] btnStart:", !!btnStart, "side=", titleSide?.value, "lv=", titleLevel?.value);
@@ -438,3 +438,4 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
+
