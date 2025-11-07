@@ -96,10 +96,10 @@ function freshState(){
 
 /* 画面遷移 */
 function showTitle(){
-  titleScreen.style.display = "flex";
+  document.body.classList.add("show-title");
 }
 function hideTitle(){
-  titleScreen.style.display = "none";
+  document.body.classList.remove("show-title");
 }
 
 /* レンダリング */
@@ -444,5 +444,6 @@ fitBoardToViewport();
 render();
 /* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
 showTitle();
+
 
 
