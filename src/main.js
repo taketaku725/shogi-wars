@@ -14,7 +14,7 @@ let cpuLevel  = 2;
 const CPU_DELAY = 350;
 
 // ====== DOM 参照は boot() で取得するので先に宣言だけ ======
-let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
+let boardEl, handSenteEl, handGoteEl, turnLabel, resignBtn, promoteDialog, fxLayer, resultDialog;
 let titleScreen, titleSide, titleLevel, btnStart;
 
 // ====== state 初期化 ======
@@ -255,9 +255,24 @@ function checkEndIfNoLegalMoves(){
   const legal = allLegalMovesForCurrent();
   if(legal.length===0){
     const king = findKing(state.board, state.turn);
-    if(king && isSquareAttacked(state.board, king.r, king.c, opponent(state.turn))){
-      showMateFlash();
-    }
+    const inCk = king && isSquareAttacked(state.board, king.r, king.c, opponent(state.turn));
+    const winner = opponent(state.turn);
+    showResult(inCk ? "詰み" : "詰み（合法手なし）", winner);
+  }
+}
+
+function showCheckBannerIfAny(){
+  const sideToMove = state.turn;
+  const k = findKing(state.board, sideToMove);
+  if(!k) return;
+  const inCk = isSquareAttacked(state.board, k.r, k.c, opponent(sideToMove));
+  // 既存の赤枠はrender()のupdateCheckEffectで入っている。ここはテキストだけ出す。
+  if(inCk){
+    const el = document.createElement("div");
+    el.className = "check-banner";
+    el.textContent = "王手";
+    fxLayer.appendChild(el);
+    setTimeout(()=> el.remove(), 900);
   }
 }
 
@@ -271,6 +286,14 @@ function openPromoteDialog(){
     const yes = promoteDialog.querySelector('.promote-yes');
     if(yes) yes.focus({preventScroll:true});
   });
+}
+function cpuShouldPromote(piece, mv){
+  // 強制成りは別処理。CPUの自動判断：升目が敵陣関与なら基本的に成る
+  if(piece.promoted) return false;
+  if(!["FU","KYO","KEI","GIN","KAKU","HISHA"].includes(piece.type)) return false;
+  const intoZone = (piece.owner===SENTE ? (mv.to.r<=2) : (mv.to.r>=6));
+  const fromZone = (piece.owner===SENTE ? (mv.from.r<=2) : (mv.from.r>=6));
+  return (intoZone || fromZone);
 }
 
 // ====== 着手処理 ======
@@ -291,8 +314,12 @@ async function doMove(mv){
   let promote = !!mv.promote;
   if(forcePromote){ promote = true; }
   else if(couldPromote){
-    const choice = await openPromoteDialog();
-    promote = (choice==="promote");
+    if(fromP.owner===cpuSide){
+      promote = cpuShouldPromote(fromP, mv);
+    }else{
+      const choice = await openPromoteDialog();
+      promote = (choice==="promote");
+    }
   }
 
   if(toP && toP.owner!==fromP.owner && toP.type!=="OU"){
@@ -305,7 +332,7 @@ async function doMove(mv){
   state.selected = null;
   state.turn = opponent(state.turn);
 
-  saveLocal(); render(); checkEndIfNoLegalMoves();
+  saveLocal(); render(); showCheckBannerIfAny(); checkEndIfNoLegalMoves();
   queueCpuIfNeeded();
 }
 
@@ -361,19 +388,43 @@ function queueCpuIfNeeded(){
 
 // ====== Undo / Reset / 保存 ======
 function pushHistory(){ history.push(JSON.stringify(state)); if(history.length>200) history.shift(); }
-function undo(){
-  if(state.turn===cpuSide) return;
-  if(history.length===0) return;
-  const prev = history.pop();
-  state = JSON.parse(prev);
-  saveLocal(); render();
+function resign(side){
+  const winner = opponent(side);
+  showResult("投了", winner);
 }
-function reset(){
-  history = [];
-  state = freshState();
-  saveLocal(); render();
-  queueCpuIfNeeded();
+
+function showResult(reason, winnerSide){
+  // ビジュアルのフラッシュ
+  showMateFlash();
+  // ダイアログで確定表示
+  const youWin = (winnerSide === humanSide);
+  const title = `${reason}`;
+  const desc  = `勝者：${ youWin ? "あなた" : "CPU" }`;
+  document.getElementById("resultTitle").textContent = title;
+  document.getElementById("resultDesc").textContent  = desc;
+
+  resultDialog.returnValue = "";
+  resultDialog.showModal();
+  const onClose = ()=>{
+    resultDialog.removeEventListener("close", onClose);
+    const v = resultDialog.returnValue;
+    if(v === "again"){
+      // 同じ設定で新規対局
+      history = [];
+      state = freshState();
+      state.turn = SENTE;
+      hideTitle();
+      fitBoardToViewport();
+      render();
+      if(cpuSide===SENTE) queueCpuIfNeeded();
+    }else{
+      // タイトルへ
+      showTitle();
+    }
+  };
+  resultDialog.addEventListener("close", onClose, {once:true});
 }
+
 function saveLocal(){
   try{
     localStorage.setItem("shogi-simple-komadai",
@@ -405,10 +456,10 @@ function boot(){
   handSenteEl  = document.getElementById("handSente");
   handGoteEl   = document.getElementById("handGote");
   turnLabel    = document.getElementById("turnLabel");
-  undoBtn      = document.getElementById("undoBtn");
-  resetBtn     = document.getElementById("resetBtn");
+  resignBtn    = document.getElementById("resignBtn");
   promoteDialog= document.getElementById("promoteDialog");
   fxLayer      = document.getElementById("fxLayer");
+  resultDialog = document.getElementById("resultDialog");
 
   titleScreen  = document.getElementById("titleScreen");
   titleSide    = document.getElementById("titleSide");
@@ -437,6 +488,7 @@ function boot(){
   resetBtn?.addEventListener("click", ()=>{
     if(confirm("初期化しますか？")){ reset(); showTitle(); }
   });
+  resignBtn?.addEventListener("click", ()=> resign(humanSide));
 
   // 起動
   loadLocal();
@@ -453,5 +505,6 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
+
 
 
