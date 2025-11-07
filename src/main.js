@@ -373,7 +373,7 @@ function loadLocal(){
 }
 
 /* タイトル開始 */
-btnStart.addEventListener("click", ()=>{
+function onStartClick(){
   humanSide = (titleSide.value === "sente") ? SENTE : GOTE;
   cpuSide   = opponent(humanSide);
   cpuLevel  = parseInt(titleLevel.value,10) || 2;
@@ -385,11 +385,23 @@ btnStart.addEventListener("click", ()=>{
   hideTitle();
   fitBoardToViewport(); render();
   if(cpuSide===SENTE) queueCpuIfNeeded();
-});
+}
 
-/* プレイ画面ボタン */
-undoBtn.addEventListener("click", ()=> undo());
-resetBtn.addEventListener("click", ()=>{ if(confirm("初期化しますか？")){ reset(); showTitle(); } });
+function wireEvents(){
+  const start = document.getElementById("btnStart");
+  const undo  = document.getElementById("undoBtn");
+  const reset = document.getElementById("resetBtn");
+  if(start) start.addEventListener("click", onStartClick);
+  if(undo)  undo.addEventListener("click", ()=> undo());
+  if(reset) reset.addEventListener("click", ()=>{
+    if(confirm("初期化しますか？")){ reset(); showTitle(); }
+  });
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireEvents);
+} else {
+  wireEvents();
+}
 
 /* 起動 */
 loadLocal();
@@ -397,3 +409,4 @@ fitBoardToViewport();
 render();
 /* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
 showTitle();
+
