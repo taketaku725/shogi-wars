@@ -3,21 +3,54 @@ import { initialBoard, findKing, isSquareAttacked,
          legalMovesFrom, legalDropsFor, allLegalMovesForTurn } from "./engine/movegen.js";
 import { chooseMoveLevel1, chooseMoveLevel2, chooseMoveLevel3 } from "./engine/search.js";
 
-/* DOM */
-const boardEl = document.getElementById("board");
-const handSenteEl = document.getElementById("handSente");
-const handGoteEl  = document.getElementById("handGote");
-const turnLabel = document.getElementById("turnLabel");
-const undoBtn = document.getElementById("undoBtn");
-const resetBtn = document.getElementById("resetBtn");
-const promoteDialog = document.getElementById("promoteDialog");
-const fxLayer = document.getElementById("fxLayer");
+// ==== DOM参照は後で入れる（未定義のまま宣言）====
+let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
+let titleScreen, titleSide, titleLevel, btnStart;
 
-/* タイトル画面 */
-const titleScreen = document.getElementById("titleScreen");
-const titleSide   = document.getElementById("titleSide");
-const titleLevel  = document.getElementById("titleLevel");
-const btnStart    = document.getElementById("btnStart");
+// ==== 起動関数 ====
+// DOM構築後にだけ呼ぶ（要素が必ず存在してから）
+function boot(){
+  // ここで初めて要素を取る
+  boardEl      = document.getElementById("board");
+  handSenteEl  = document.getElementById("handSente");
+  handGoteEl   = document.getElementById("handGote");
+  turnLabel    = document.getElementById("turnLabel");
+  undoBtn      = document.getElementById("undoBtn");
+  resetBtn     = document.getElementById("resetBtn");
+  promoteDialog= document.getElementById("promoteDialog");
+  fxLayer      = document.getElementById("fxLayer");
+
+  titleScreen  = document.getElementById("titleScreen");
+  titleSide    = document.getElementById("titleSide");
+  titleLevel   = document.getElementById("titleLevel");
+  btnStart     = document.getElementById("btnStart");
+
+  // 存在チェック（デバッグ用）
+  if(!btnStart || !titleScreen || !boardEl){
+    console.error("[boot] 必須DOMが見つかりません", {btnStart, titleScreen, boardEl});
+    return;
+  }
+
+  // イベント登録（ここで初めて addEventListener）
+  btnStart.addEventListener("click", onStartClick);
+  undoBtn?.addEventListener("click", ()=> undo());
+  resetBtn?.addEventListener("click", ()=>{
+    if(confirm("初期化しますか？")){ reset(); showTitle(); }
+  });
+
+  // 初期化＆描画
+  loadLocal();
+  fitBoardToViewport();
+  render();
+  showTitle();
+}
+
+// DOM完成後に boot() を保証
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
 
 /* レイアウト（トップバー見切れ防止：極小画面でも安全値へ縮小） */
 function fitBoardToViewport(){
@@ -380,12 +413,14 @@ function onStartClick(){
 
   history = [];
   state = freshState();
-  state.turn = SENTE; // 先手番から開始（一般ルール）
+  state.turn = SENTE;
   saveLocal();
   hideTitle();
-  fitBoardToViewport(); render();
+  fitBoardToViewport();
+  render();
   if(cpuSide===SENTE) queueCpuIfNeeded();
 }
+
 
 function wireEvents(){
   const start = document.getElementById("btnStart");
@@ -409,4 +444,5 @@ fitBoardToViewport();
 render();
 /* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
 showTitle();
+
 
