@@ -381,23 +381,6 @@ function onStartClick(){
   if(cpuSide===SENTE) queueCpuIfNeeded();
 }
 
-
-function wireEvents(){
-  const start = document.getElementById("btnStart");
-  const undo  = document.getElementById("undoBtn");
-  const reset = document.getElementById("resetBtn");
-  if(start) start.addEventListener("click", onStartClick);
-  if(undo)  undo.addEventListener("click", ()=> undo());
-  if(reset) reset.addEventListener("click", ()=>{
-    if(confirm("初期化しますか？")){ reset(); showTitle(); }
-  });
-}
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", wireEvents);
-} else {
-  wireEvents();
-}
-
 // DOM構築後にだけ呼ぶ（要素が必ず存在してから）
 function boot(){
   // ここで初めて要素を取る
@@ -423,8 +406,11 @@ function boot(){
 
   // イベント登録（ここで初めて addEventListener）
   btnStart.addEventListener("click", onStartClick);
-  undoBtn?.addEventListener("click", ()=> undo());
-  resetBtn?.addEventListener("click", ()=>{
+
+  const undoBtnEl  = undoBtn;
+  const resetBtnEl = resetBtn;
+  undoBtnEl?.addEventListener("click", ()=> undo());
+  resetBtnEl?.addEventListener("click", ()=>{
     if(confirm("初期化しますか？")){ reset(); showTitle(); }
   });
 
@@ -441,15 +427,3 @@ if (document.readyState === "loading") {
 } else {
   boot();
 }
-
-/* 起動 */
-loadLocal();
-fitBoardToViewport();
-render();
-/* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
-showTitle();
-
-
-
-
-
