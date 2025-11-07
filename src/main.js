@@ -3,10 +3,6 @@ import { initialBoard, findKing, isSquareAttacked,
          legalMovesFrom, legalDropsFor, allLegalMovesForTurn } from "./engine/movegen.js";
 import { chooseMoveLevel1, chooseMoveLevel2, chooseMoveLevel3 } from "./engine/search.js";
 
-// ==== DOM参照は後で入れる（未定義のまま宣言）====
-let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
-let titleScreen, titleSide, titleLevel, btnStart;
-
 /* 状態 */
 let state = null;
 let history = [];
@@ -16,43 +12,41 @@ let cpuSide   = GOTE;
 let cpuLevel  = 2;
 const CPU_DELAY = 350;
 
-// ==== 起動関数 ====
-// DOM構築後にだけ呼ぶ（要素が必ず存在してから）
-function boot(){
-  // ここで初めて要素を取る
-  boardEl      = document.getElementById("board");
-  handSenteEl  = document.getElementById("handSente");
-  handGoteEl   = document.getElementById("handGote");
-  turnLabel    = document.getElementById("turnLabel");
-  undoBtn      = document.getElementById("undoBtn");
-  resetBtn     = document.getElementById("resetBtn");
-  promoteDialog= document.getElementById("promoteDialog");
-  fxLayer      = document.getElementById("fxLayer");
+// ==== DOM参照は後で入れる（未定義のまま宣言）====
+let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
+let titleScreen, titleSide, titleLevel, btnStart;
 
-  titleScreen  = document.getElementById("titleScreen");
-  titleSide    = document.getElementById("titleSide");
-  titleLevel   = document.getElementById("titleLevel");
-  btnStart     = document.getElementById("btnStart");
-
-  // 存在チェック（デバッグ用）
-  if(!btnStart || !titleScreen || !boardEl){
-    console.error("[boot] 必須DOMが見つかりません", {btnStart, titleScreen, boardEl});
-    return;
-  }
-
-  // イベント登録（ここで初めて addEventListener）
-  btnStart.addEventListener("click", onStartClick);
-  undoBtn?.addEventListener("click", ()=> undo());
-  resetBtn?.addEventListener("click", ()=>{
-    if(confirm("初期化しますか？")){ reset(); showTitle(); }
-  });
-
-  // 初期化＆描画
-  loadLocal();
-  fitBoardToViewport();
-  render();
-  showTitle();
+/* 初期化 */
+function freshState(){
+  return {
+    board: initialBoard(),
+    hands: {
+      [SENTE]: { FU:0,KYO:0,KEI:0,GIN:0,KIN:0,KAKU:0,HISHA:0 },
+      [GOTE] : { FU:0,KYO:0,KEI:0,GIN:0,KIN:0,KAKU:0,HISHA:0 },
+    },
+    turn: SENTE,
+    lastMove: null,
+    selected: null,
+  };
 }
+
+// ==== 起動関数 ====
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem("shogi-simple-komadai");
+    if(raw){
+      const parsed = JSON.parse(raw);
+      state   = parsed.state   || freshState();
+      history = parsed.history || [];
+      humanSide = (parsed.cpu?.humanSide) || SENTE;
+      cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
+      cpuLevel  = parsed.cpu?.cpuLevel || 2;
+      return;
+    }
+  }catch(e){}
+  state = freshState();
+}
+
 
 
 
@@ -76,19 +70,7 @@ window.addEventListener("resize", fitBoardToViewport);
 window.addEventListener("orientationchange", fitBoardToViewport);
 
 
-/* 初期化 */
-function freshState(){
-  return {
-    board: initialBoard(),
-    hands: {
-      [SENTE]: { FU:0,KYO:0,KEI:0,GIN:0,KIN:0,KAKU:0,HISHA:0 },
-      [GOTE] : { FU:0,KYO:0,KEI:0,GIN:0,KIN:0,KAKU:0,HISHA:0 },
-    },
-    turn: SENTE,
-    lastMove: null,
-    selected: null,
-  };
-}
+
 
 /* 画面遷移 */
 function showTitle(){
@@ -382,21 +364,6 @@ function reset(){
   queueCpuIfNeeded();
 }
 function saveLocal(){ try{ localStorage.setItem("shogi-simple-komadai", JSON.stringify({state, history, cpu:{vsCPU, humanSide, cpuSide, cpuLevel}})); }catch(e){} }
-function loadLocal(){
-  try{
-    const raw = localStorage.getItem("shogi-simple-komadai");
-    if(raw){
-      const parsed = JSON.parse(raw);
-      state   = parsed.state   || freshState();
-      history = parsed.history || [];
-      humanSide = (parsed.cpu?.humanSide) || SENTE;
-      cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
-      cpuLevel  = parsed.cpu?.cpuLevel || 2;
-      return;
-    }
-  }catch(e){}
-  state = freshState();
-}
 
 /* タイトル開始 */
 function onStartClick(){
@@ -431,6 +398,43 @@ if (document.readyState === "loading") {
   wireEvents();
 }
 
+// DOM構築後にだけ呼ぶ（要素が必ず存在してから）
+function boot(){
+  // ここで初めて要素を取る
+  boardEl      = document.getElementById("board");
+  handSenteEl  = document.getElementById("handSente");
+  handGoteEl   = document.getElementById("handGote");
+  turnLabel    = document.getElementById("turnLabel");
+  undoBtn      = document.getElementById("undoBtn");
+  resetBtn     = document.getElementById("resetBtn");
+  promoteDialog= document.getElementById("promoteDialog");
+  fxLayer      = document.getElementById("fxLayer");
+
+  titleScreen  = document.getElementById("titleScreen");
+  titleSide    = document.getElementById("titleSide");
+  titleLevel   = document.getElementById("titleLevel");
+  btnStart     = document.getElementById("btnStart");
+
+  // 存在チェック（デバッグ用）
+  if(!btnStart || !titleScreen || !boardEl){
+    console.error("[boot] 必須DOMが見つかりません", {btnStart, titleScreen, boardEl});
+    return;
+  }
+
+  // イベント登録（ここで初めて addEventListener）
+  btnStart.addEventListener("click", onStartClick);
+  undoBtn?.addEventListener("click", ()=> undo());
+  resetBtn?.addEventListener("click", ()=>{
+    if(confirm("初期化しますか？")){ reset(); showTitle(); }
+  });
+
+  // 初期化＆描画
+  loadLocal();
+  fitBoardToViewport();
+  render();
+  showTitle();
+}
+
 // DOM完成後に boot() を保証
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", boot);
@@ -444,6 +448,7 @@ fitBoardToViewport();
 render();
 /* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
 showTitle();
+
 
 
 
