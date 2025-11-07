@@ -1,44 +1,41 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <link rel="icon" href="./favicon.ico">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
-  <title>将棋（CPU戦・エンジン分割）</title>
+  <title>将棋（CPU戦・タイトル選択）</title>
+  <link rel="icon" href="./favicon.ico">
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div id="app" class="app">
-    <header class="topbar" id="topbar">
-      <span id="turnLabel">先手の手番</span>
-      <div class="spacer"></div>
-
-      <div class="cpu-controls" aria-label="CPU設定">
-        <label class="ctl">
-          対戦:
-          <select id="modeSelect">
-            <option value="human">人間 vs 人間</option>
-            <option value="cpu">人間 vs CPU</option>
+    <!-- ★ タイトル画面 -->
+    <section id="titleScreen" class="title-screen" aria-label="タイトル画面">
+      <div class="title-card">
+        <h1>SHOGI</h1>
+        <div class="row">
+          <label>あなたの手番</label>
+          <select id="titleSide">
+            <option value="sente">先手</option>
+            <option value="gote">後手</option>
           </select>
-        </label>
-        <label class="ctl">
-          手番:
-          <select id="sideSelect">
-            <option value="sente">人間=先手</option>
-            <option value="gote">人間=後手</option>
-          </select>
-        </label>
-        <label class="ctl">
-          強さ:
-          <select id="levelSelect">
+        </div>
+        <div class="row">
+          <label>CPUの強さ</label>
+          <select id="titleLevel">
             <option value="1">★☆☆（速い）</option>
             <option value="2" selected>★★☆（標準）</option>
             <option value="3">★★★（思考）</option>
           </select>
-        </label>
-        <button id="applyCpuBtn" class="btn">適用</button>
+        </div>
+        <button id="btnStart" class="btn start">対局開始</button>
       </div>
+    </section>
 
+    <!-- ★ プレイ画面 -->
+    <header class="topbar" id="topbar">
+      <span id="turnLabel">先手の手番</span>
+      <div class="spacer"></div>
       <button id="undoBtn" class="btn">一手戻す</button>
       <button id="resetBtn" class="btn danger">初期化</button>
     </header>
@@ -69,7 +66,6 @@
     </form>
   </dialog>
 
-  <!-- ★ ES Modules -->
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>
