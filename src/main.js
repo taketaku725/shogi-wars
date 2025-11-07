@@ -7,6 +7,15 @@ import { chooseMoveLevel1, chooseMoveLevel2, chooseMoveLevel3 } from "./engine/s
 let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
 let titleScreen, titleSide, titleLevel, btnStart;
 
+/* 状態 */
+let state = null;
+let history = [];
+let vsCPU = true;          // ← 対人戦はいったん無し
+let humanSide = SENTE;
+let cpuSide   = GOTE;
+let cpuLevel  = 2;
+const CPU_DELAY = 350;
+
 // ==== 起動関数 ====
 // DOM構築後にだけ呼ぶ（要素が必ず存在してから）
 function boot(){
@@ -45,12 +54,7 @@ function boot(){
   showTitle();
 }
 
-// DOM完成後に boot() を保証
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot);
-} else {
-  boot();
-}
+
 
 /* レイアウト（トップバー見切れ防止：極小画面でも安全値へ縮小） */
 function fitBoardToViewport(){
@@ -71,14 +75,6 @@ function fitBoardToViewport(){
 window.addEventListener("resize", fitBoardToViewport);
 window.addEventListener("orientationchange", fitBoardToViewport);
 
-/* 状態 */
-let state = null;
-let history = [];
-let vsCPU = true;          // ← 対人戦はいったん無し
-let humanSide = SENTE;
-let cpuSide   = GOTE;
-let cpuLevel  = 2;
-const CPU_DELAY = 350;
 
 /* 初期化 */
 function freshState(){
@@ -391,14 +387,11 @@ function loadLocal(){
     const raw = localStorage.getItem("shogi-simple-komadai");
     if(raw){
       const parsed = JSON.parse(raw);
-      state = parsed.state || freshState();
+      state   = parsed.state   || freshState();
       history = parsed.history || [];
-      if(parsed.cpu){
-        vsCPU = true;
-        humanSide = parsed.cpu.humanSide || SENTE;
-        cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
-        cpuLevel  = parsed.cpu.cpuLevel  || 2;
-      }
+      humanSide = (parsed.cpu?.humanSide) || SENTE;
+      cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
+      cpuLevel  = parsed.cpu?.cpuLevel || 2;
       return;
     }
   }catch(e){}
@@ -438,12 +431,20 @@ if (document.readyState === "loading") {
   wireEvents();
 }
 
+// DOM完成後に boot() を保証
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  boot();
+}
+
 /* 起動 */
 loadLocal();
 fitBoardToViewport();
 render();
 /* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
 showTitle();
+
 
 
 
