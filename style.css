@@ -218,3 +218,20 @@ body{
   :root{ --topbar-h: 38px; --hands-h: 54px; }
   .hand-title{ display:none }
 }
+
+/* ===== タイトル画面の完全・独立表示 ===== */
+body.show-title #app > :not(#titleScreen) {
+  display:none !important;
+}
+
+/* タイトル画面に専用背景（重厚＆静かな戦闘前の空気） */
+.title-screen{
+  background:
+    radial-gradient(1200px 800px at 50% -20%, rgba(255,255,255,0.08), rgba(0,0,0,0.75)),
+    url("./assets/title_bg.jpg") center/cover no-repeat;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ※ 背景画像がない場合はこの行を一時的に外してOK（グラデだけでも美しい） */
+
