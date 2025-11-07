@@ -1,0 +1,266 @@
+:root{
+  /* ベース */
+  --bg:#0b0d12;
+  --grad1:#0b0d12;
+  --grad2:#121725;
+  --panel:rgba(255,255,255,0.06);
+  --panel-strong:rgba(255,255,255,0.10);
+  --line:#1f2636;
+  --text:#e7ebf2;
+  --sub:#a7b1c7;
+  --hi:#6aa6ff;
+  --accent:#ffce54;
+  --danger:#f0625f;
+
+  /* 盤と駒（既存） */
+  --squarepx:48px;
+  --board-pad:8px; --grid-gap:2px;
+  --wood:#b48a55; --cell:#dcb878; --piece:#f1e2bf; --piece-border:#5f5335;
+
+  /* レイアウト寸法 */
+  --topbar-h: 40px;
+  --hands-h: 58px;
+
+  /* 駒形状（確定値） */
+  --piece-scale-x: 0.90;
+  --tri-start-y: 22%;
+  --trap-top-left: 10%;
+  --trap-top-right: 90%;
+  --label-shift: 12%;
+  --gote-label-bias: 20%;
+
+  /* エレベーション */
+  --blur: 16px;
+  --shadow-1: 0 6px 24px rgba(0,0,0,0.28);
+  --shadow-2: 0 12px 40px rgba(0,0,0,0.35);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%; margin:0}
+body{
+  background: radial-gradient(1200px 800px at 20% -10%, #172035 0%, #0e1322 48%, #0b0d12 100%);
+  color:var(--text);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+  line-height:1.25; overflow:hidden;
+}
+
+.app{height:100vh; width:100vw; display:flex; flex-direction:column; overflow:hidden}
+
+/* ===== Topbar ===== */
+.topbar{
+  height:var(--topbar-h);
+  display:flex; align-items:center; gap:10px;
+  padding:0 12px;
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  box-shadow: var(--shadow-1);
+}
+.topbar #turnLabel{
+  font-weight:700; letter-spacing:0.02em;
+  padding:6px 10px; border-radius:999px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.06));
+  border:1px solid rgba(255,255,255,0.18);
+  color:#eaf2ff; text-shadow:0 1px 0 #0007;
+  font-size:clamp(11px,2.2vw,13px);
+}
+.topbar .spacer{flex:1}
+.btn{
+  border:none; cursor:pointer;
+  padding:7px 12px; border-radius:999px;
+  font-size:clamp(11px,2.2vw,13px); font-weight:700;
+  color:#eaf2ff;
+  background: linear-gradient(180deg, #2a3a63, #1d2a49);
+  border:1px solid rgba(117,160,255,0.25);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 8px 18px rgba(0,0,0,0.25);
+  transition: transform .08s ease, filter .15s ease;
+}
+.btn:hover{ filter: brightness(1.06) }
+.btn:active{ transform: translateY(1px) }
+.btn.danger{
+  background: linear-gradient(180deg, #7b2f31, #5a2325);
+  border-color: rgba(255,120,120,0.35);
+}
+
+/* ★CPUコントロールの見た目 */
+.cpu-controls{
+  display:flex; align-items:center; gap:8px; margin-right:8px;
+}
+.cpu-controls .ctl{
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; color:#dbe4ffcc;
+}
+.cpu-controls select{
+  height:28px; border-radius:999px; padding:0 10px;
+  background: rgba(255,255,255,0.08);
+  color:#eaf2ff; border:1px solid rgba(255,255,255,0.18);
+}
+
+/* ===== 駒台 ===== */
+.hands{
+  height:var(--hands-h);
+  display:flex; align-items:center; gap:12px;
+  padding:8px 12px;
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border-top:1px solid rgba(255,255,255,0.06);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  box-shadow: var(--shadow-1);
+}
+.hand-title{
+  color:#d6d9e5; opacity:0.75;
+  padding:4px 8px; border-radius:8px;
+  font-weight:800; letter-spacing:.02em;
+  font-size:clamp(10px,2.1vw,12px);
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+  border:1px solid rgba(255,255,255,0.15);
+}
+.hand{ display:flex; align-items:center; gap:8px; overflow:auto hidden; flex:1; min-width:0 }
+
+/* 駒バッジ */
+.cap{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:12px;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.05));
+  border:1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.15);
+  white-space:nowrap; cursor:pointer;
+  transition: transform .08s ease, filter .15s ease, background .2s ease;
+}
+.cap:hover{ filter: brightness(1.06) }
+.cap:active{ transform: translateY(1px) }
+.cap .mini{
+  width:28px; height:28px; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  color:#2d1d0b; font-weight:800; font-size:clamp(12px,2.4vw,14px);
+}
+.cap .mini::before,
+.cap .mini::after{
+  content:""; position:absolute; inset:0;
+  clip-path: polygon(
+    50% 0%,
+    var(--trap-top-right) var(--tri-start-y),
+    100% 100%,
+    0%   100%,
+    var(--trap-top-left) var(--tri-start-y)
+  );
+}
+.cap .mini::before{ background:var(--piece-border) }
+.cap .mini::after{ inset:1.5px; background:var(--piece) }
+.cap .count{
+  color:#e9ecf6; font-weight:800; font-variant-numeric:tabular-nums;
+  padding:2px 6px; border-radius:999px; letter-spacing:.02em;
+  background: linear-gradient(180deg, rgba(80,110,190,.45), rgba(60,85,160,.35));
+  border:1px solid rgba(130,170,255,.45);
+}
+
+/* ===== 盤まわり ===== */
+.board-wrap{ flex:1; display:flex; align-items:center; justify-content:center; padding:10px 12px; position:relative }
+.board{
+  display:grid; grid-template-columns: repeat(9, var(--squarepx)); grid-template-rows: repeat(9, var(--squarepx));
+  gap: var(--grid-gap);
+  background:var(--wood); padding: var(--board-pad);
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.25);
+  box-shadow: 0 16px 44px rgba(0,0,0,.45);
+  max-width:100%; max-height:100%;
+}
+.fx-layer{ position:absolute; inset:0; pointer-events:none; }
+
+/* マス＆選択 */
+.square{
+  position:relative; background:var(--cell); border-radius:6px;
+  display:flex; align-items:center; justify-content:center;
+  user-select:none; -webkit-user-select:none; touch-action:manipulation;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.14);
+}
+.square.highlight{ outline:3px solid var(--hi); outline-offset:-2px }
+.square.lastmove{ box-shadow: inset 0 0 0 3px rgba(46, 204, 113, 0.8) }
+
+/* 王手エフェクト */
+.square.incheck{ animation: checkPulse 0.9s ease-in-out infinite }
+@keyframes checkPulse{
+  0%,100%{ box-shadow: inset 0 0 0 3px rgba(231,76,60,0.95), 0 0 18px 6px rgba(231,76,60,0.25) }
+  50%    { box-shadow: inset 0 0 0 2px rgba(231,76,60,0.55), 0 0 10px 2px rgba(231,76,60,0.15) }
+}
+
+/* 駒（形状・ラベル位置） */
+.piece{
+  --rot: 0deg; --sx: var(--piece-scale-x); --ty: 0;
+  position:relative;
+  width: calc(var(--squarepx) * 0.86);
+  height: calc(var(--squarepx) * 0.86);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:900; letter-spacing:0.04em; color:#2d1d0b;
+  transform: rotate(var(--rot)) scaleX(var(--sx)) translateY(var(--ty));
+  transition: transform 120ms ease, outline 120ms ease;
+}
+.piece .shape{
+  position:absolute; inset:0; background:var(--piece-border);
+  clip-path: polygon(
+    50% 0%,
+    var(--trap-top-right) var(--tri-start-y),
+    100% 100%,
+    0%   100%,
+    var(--trap-top-left) var(--tri-start-y)
+  );
+}
+.piece .shape::after{
+  content:""; position:absolute; inset:2px; background:var(--piece);
+  clip-path: inherit;
+}
+.piece.gote{ --rot: 180deg }
+.piece.selected{ outline:3px solid var(--accent); --ty: -1px }
+.label{
+  position:relative; z-index:1;
+  font-size: clamp(12px, calc(var(--squarepx)*0.36), 22px);
+  transform: translateY(var(--label-shift));
+}
+.piece.gote .label{ transform: translateY(calc(-1 * var(--label-shift) + var(--gote-label-bias))) }
+.piece.promoted .label{ color:#8b0b0b }
+
+/* 詰みフラッシュ & モーダル */
+.mate-flash{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size: clamp(24px, 8vw, 56px);
+  color:#fff; text-shadow: 0 3px 12px #000a;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0.35), rgba(0,0,0,0.7));
+  animation: flashIn 0.35s ease, fadeOut 1.2s ease 1.2s forwards;
+}
+@keyframes flashIn{ from{opacity:0; filter:blur(6px)} to{opacity:1; filter:none} }
+@keyframes fadeOut{ to{opacity:0} }
+
+dialog{
+  border:none; border-radius:14px; padding:16px 16px 14px;
+  color:#e9eefb;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow: var(--shadow-2);
+  max-width:min(90vw,360px)
+}
+dialog::backdrop{ background:#0008 }
+.promote-form{ display:flex; flex-direction:column; gap:12px; align-items:center }
+.promote-form p{ margin:6px 0 2px; font-size:13px; opacity:.95 }
+.promote-form menu{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100% }
+.promote-yes{
+  background: linear-gradient(180deg, #2b6a46, #224f35);
+  border:1px solid rgba(120,220,160,.35);
+}
+.promote-no{
+  background: linear-gradient(180deg, #6a2b2b, #4f2222);
+  border:1px solid rgba(220,120,120,.35);
+}
+.btn.promote-yes,.btn.promote-no{
+  padding:8px 12px; border-radius:10px; font-weight:800;
+}
+
+/* レスポンシブ */
+@media (max-width: 480px){
+  :root{ --topbar-h: 38px; --hands-h: 54px; }
+  .hand-title{ display:none }
+  .cpu-controls{ gap:6px }
+  .cpu-controls .ctl{ font-size:11px }
+  .cpu-controls select{ height:26px; padding:0 8px }
+}
