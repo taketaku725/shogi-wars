@@ -37,8 +37,7 @@
     <header class="topbar" id="topbar">
       <span id="turnLabel">先手の手番</span>
       <div class="spacer"></div>
-      <button id="undoBtn" class="btn">一手戻す</button>
-      <button id="resetBtn" class="btn danger">初期化</button>
+      <button id="resignBtn" class="btn danger">投了</button>
     </header>
 
     <section class="hands komadai" id="handsTop" aria-label="後手の駒台">
@@ -63,6 +62,18 @@
       <menu>
         <button value="promote" class="btn promote-yes">はい</button>
         <button value="keep" class="btn promote-no">いいえ</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- 結果表示ダイアログ -->
+  <dialog id="resultDialog">
+    <form method="dialog" class="result-card">
+      <h2 id="resultTitle">対局結果</h2>
+      <p id="resultDesc"></p>
+      <menu>
+        <button value="again" class="btn">もう一局</button>
+        <button value="title" class="btn danger">タイトルへ</button>
       </menu>
     </form>
   </dialog>
