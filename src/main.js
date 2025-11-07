@@ -1,22 +1,23 @@
+// ====== imports ======
 import { SENTE, GOTE, opponent, deepCopy, labelForPiece } from "./engine/util.js";
 import { initialBoard, findKing, isSquareAttacked,
          legalMovesFrom, legalDropsFor, allLegalMovesForTurn } from "./engine/movegen.js";
 import { chooseMoveLevel1, chooseMoveLevel2, chooseMoveLevel3 } from "./engine/search.js";
 
-/* 状態 */
+// ====== globals (必ず import の直後に置く) ======
 let state = null;
 let history = [];
-let vsCPU = true;          // ← 対人戦はいったん無し
+let vsCPU = true;              // 対人戦は一旦オフ
 let humanSide = SENTE;
 let cpuSide   = GOTE;
 let cpuLevel  = 2;
 const CPU_DELAY = 350;
 
-// ==== DOM参照は後で入れる（未定義のまま宣言）====
+// ====== DOM 参照は boot() で取得するので先に宣言だけ ======
 let boardEl, handSenteEl, handGoteEl, turnLabel, undoBtn, resetBtn, promoteDialog, fxLayer;
 let titleScreen, titleSide, titleLevel, btnStart;
 
-/* 初期化 */
+// ====== state 初期化 ======
 function freshState(){
   return {
     board: initialBoard(),
@@ -30,57 +31,47 @@ function freshState(){
   };
 }
 
-// ==== 起動関数 ====
+// ====== ローカル保存の読み込み ======
 function loadLocal(){
   try{
     const raw = localStorage.getItem("shogi-simple-komadai");
     if(raw){
       const parsed = JSON.parse(raw);
-      state   = parsed.state   || freshState();
-      history = parsed.history || [];
-      humanSide = (parsed.cpu?.humanSide) || SENTE;
+      state     = parsed.state   || freshState();
+      history   = parsed.history || [];
+      humanSide = parsed.cpu?.humanSide || SENTE;
       cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
-      cpuLevel  = parsed.cpu?.cpuLevel || 2;
+      cpuLevel  = parsed.cpu?.cpuLevel  || 2;
       return;
     }
   }catch(e){}
   state = freshState();
 }
 
-
-
-
-/* レイアウト（トップバー見切れ防止：極小画面でも安全値へ縮小） */
+// ====== レイアウト（トップバー見切れ防止） ======
 function fitBoardToViewport(){
   const style = getComputedStyle(document.documentElement);
-  const topbarH = parseInt(style.getPropertyValue("--topbar-h")) || 40;
-  const handsH  = parseInt(style.getPropertyValue("--hands-h"))  || 58;
+  const topbarH  = parseInt(style.getPropertyValue("--topbar-h"))  || 40;
+  const handsH   = parseInt(style.getPropertyValue("--hands-h"))   || 58;
   const boardPad = parseInt(style.getPropertyValue("--board-pad")) || 8;
   const gridGap  = parseInt(style.getPropertyValue("--grid-gap"))  || 2;
 
   const vw = window.innerWidth, vh = window.innerHeight;
-  const verticalAvail = Math.max(140, vh - topbarH - (handsH * 2) - 8); // 余白:8
+  const verticalAvail = Math.max(140, vh - topbarH - (handsH * 2) - 8);
   const overhead = (boardPad * 2) + (gridGap * 8);
   const squareFromH = Math.floor((verticalAvail - overhead) / 9);
   const squareFromW = Math.floor((vw - 16 - overhead) / 9);
-  const square = Math.max(16, Math.min(squareFromH, squareFromW)); // 最小16pxまで下げてでも上UI死守
+  const square = Math.max(16, Math.min(squareFromH, squareFromW)); // 最小16px
   document.documentElement.style.setProperty("--squarepx", square + "px");
 }
 window.addEventListener("resize", fitBoardToViewport);
 window.addEventListener("orientationchange", fitBoardToViewport);
 
+// ====== 画面遷移（タイトルの表示制御は class で） ======
+function showTitle(){ document.body.classList.add("show-title"); }
+function hideTitle(){ document.body.classList.remove("show-title"); }
 
-
-
-/* 画面遷移 */
-function showTitle(){
-  document.body.classList.add("show-title");
-}
-function hideTitle(){
-  document.body.classList.remove("show-title");
-}
-
-/* レンダリング */
+// ====== レンダリング ======
 function render(){
   boardEl.innerHTML = "";
   for(let r=0;r<9;r++){
@@ -147,7 +138,8 @@ function renderHand(el, owner){
       const cap = document.createElement("div");
       cap.className = "cap"; cap.dataset.owner = owner; cap.dataset.type = t;
       const mini = document.createElement("div"); mini.className = "mini";
-      const text = document.createElement("div"); text.textContent = t==="HISHA"?"飛":t==="KAKU"?"角":t==="KIN"?"金":t==="GIN"?"銀":t==="KEI"?"桂":t==="KYO"?"香":"歩";
+      const text = document.createElement("div"); text.textContent =
+        t==="HISHA"?"飛":t==="KAKU"?"角":t==="KIN"?"金":t==="GIN"?"銀":t==="KEI"?"桂":t==="KYO"?"香":"歩";
       text.style.position="relative"; text.style.zIndex="1";
       mini.appendChild(text);
       const num  = document.createElement("span"); num.className = "count"; num.textContent = "×"+cnt;
@@ -173,7 +165,7 @@ function highlightMoves(moves){
   }
 }
 
-/* 王手エフェクト：両陣営 */
+// ====== 王手エフェクト（両陣営） ======
 function updateCheckEffect(){
   document.querySelectorAll(".square.incheck").forEach(el=>el.classList.remove("incheck"));
   for(const owner of [SENTE, GOTE]){
@@ -187,12 +179,12 @@ function updateCheckEffect(){
   }
 }
 
-/* 入力 */
+// ====== 入力処理 ======
 function blockHumanInput(){ boardEl.style.pointerEvents="none"; handGoteEl.style.pointerEvents="none"; handSenteEl.style.pointerEvents="none"; }
 function allowHumanInput(){ boardEl.style.pointerEvents=""; handGoteEl.style.pointerEvents=""; handSenteEl.style.pointerEvents=""; }
 
 function onPieceClick(e){
-  if(state.turn===cpuSide) return; // CPU手番は無効
+  if(state.turn===cpuSide) return;
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r,10);
   const c = parseInt(e.currentTarget.dataset.c,10);
@@ -213,6 +205,7 @@ function onPieceClick(e){
     state.selected = { from:"board", r, c }; render();
   }
 }
+
 function onSquareClick(e){
   if(state.turn===cpuSide) return;
   const r = parseInt(e.currentTarget.dataset.r,10);
@@ -229,6 +222,7 @@ function onSquareClick(e){
     if(drop) return doDrop(drop);
   }
 }
+
 function onHandClick(e){
   if(state.turn===cpuSide) return;
   const owner = e.currentTarget.dataset.owner;
@@ -240,7 +234,7 @@ function onHandClick(e){
   state.selected = { from:"hand", type }; render();
 }
 
-/* 終局チェック */
+// ====== 終局チェック ======
 function allLegalMovesForCurrent(){ return allLegalMovesForTurn(state); }
 function checkEndIfNoLegalMoves(){
   const legal = allLegalMovesForCurrent();
@@ -252,7 +246,7 @@ function checkEndIfNoLegalMoves(){
   }
 }
 
-/* 成り確認 */
+// ====== 成り確認 ======
 function openPromoteDialog(){
   return new Promise(resolve=>{
     promoteDialog.returnValue = "";
@@ -264,7 +258,7 @@ function openPromoteDialog(){
   });
 }
 
-/* 着手処理 */
+// ====== 着手処理 ======
 async function doMove(mv){
   pushHistory();
   const fromP = state.board[mv.from.r][mv.from.c];
@@ -289,7 +283,7 @@ async function doMove(mv){
   if(toP && toP.owner!==fromP.owner && toP.type!=="OU"){
     state.hands[fromP.owner][toP.type]++;
   }
-  state.board[mv.to.r][mv.to.c]   = { type: fromP.type, owner: fromP.owner, promoted: fromP.promoted || promote };
+  state.board[mv.to.r][mv.to.c]     = { type: fromP.type, owner: fromP.owner, promoted: fromP.promoted || promote };
   state.board[mv.from.r][mv.from.c] = null;
 
   state.lastMove = { from:mv.from, to:mv.to, promoted: promote||false };
@@ -299,6 +293,7 @@ async function doMove(mv){
   saveLocal(); render(); checkEndIfNoLegalMoves();
   queueCpuIfNeeded();
 }
+
 function doDrop(mv){
   pushHistory();
   state.board[mv.to.r][mv.to.c] = { type: mv.type, owner: mv.owner, promoted:false };
@@ -310,7 +305,7 @@ function doDrop(mv){
   queueCpuIfNeeded();
 }
 
-/* エフェクト */
+// ====== エフェクト ======
 function showMateFlash(){
   Array.from(fxLayer.querySelectorAll(".mate-flash")).forEach(n=>n.remove());
   const el = document.createElement("div");
@@ -320,7 +315,7 @@ function showMateFlash(){
   setTimeout(()=>{ el.remove(); }, 2500);
 }
 
-/* CPU進行 */
+// ====== CPU ======
 function chooseCpuMove(){
   const snapshot = deepCopy(state);
   const aiSide = cpuSide;
@@ -328,6 +323,7 @@ function chooseCpuMove(){
   if(cpuLevel===2) return chooseMoveLevel2(snapshot, aiSide);
   return chooseMoveLevel3(snapshot, aiSide);
 }
+
 let cpuTimer = null;
 function queueCpuIfNeeded(){
   if(cpuTimer){ clearTimeout(cpuTimer); cpuTimer=null; }
@@ -348,10 +344,10 @@ function queueCpuIfNeeded(){
   }, CPU_DELAY);
 }
 
-/* Undo / Reset / 保存 */
+// ====== Undo / Reset / 保存 ======
 function pushHistory(){ history.push(JSON.stringify(state)); if(history.length>200) history.shift(); }
 function undo(){
-  if(state.turn===cpuSide) return; // CPU手番での連打ガード
+  if(state.turn===cpuSide) return;
   if(history.length===0) return;
   const prev = history.pop();
   state = JSON.parse(prev);
@@ -363,9 +359,15 @@ function reset(){
   saveLocal(); render();
   queueCpuIfNeeded();
 }
-function saveLocal(){ try{ localStorage.setItem("shogi-simple-komadai", JSON.stringify({state, history, cpu:{vsCPU, humanSide, cpuSide, cpuLevel}})); }catch(e){} }
+function saveLocal(){
+  try{
+    localStorage.setItem("shogi-simple-komadai",
+      JSON.stringify({state, history, cpu:{vsCPU, humanSide, cpuSide, cpuLevel}})
+    );
+  }catch(e){}
+}
 
-/* タイトル開始 */
+// ====== タイトル開始 ======
 function onStartClick(){
   humanSide = (titleSide.value === "sente") ? SENTE : GOTE;
   cpuSide   = opponent(humanSide);
@@ -373,7 +375,7 @@ function onStartClick(){
 
   history = [];
   state = freshState();
-  state.turn = SENTE;
+  state.turn = SENTE;         // 先手番から
   saveLocal();
   hideTitle();
   fitBoardToViewport();
@@ -381,9 +383,9 @@ function onStartClick(){
   if(cpuSide===SENTE) queueCpuIfNeeded();
 }
 
-// DOM構築後にだけ呼ぶ（要素が必ず存在してから）
+// ====== 起動（DOM完成後に一度だけ） ======
 function boot(){
-  // ここで初めて要素を取る
+  // DOM 取得
   boardEl      = document.getElementById("board");
   handSenteEl  = document.getElementById("handSente");
   handGoteEl   = document.getElementById("handGote");
@@ -398,30 +400,39 @@ function boot(){
   titleLevel   = document.getElementById("titleLevel");
   btnStart     = document.getElementById("btnStart");
 
-  // 存在チェック（デバッグ用）
   if(!btnStart || !titleScreen || !boardEl){
     console.error("[boot] 必須DOMが見つかりません", {btnStart, titleScreen, boardEl});
     return;
   }
 
-  // イベント登録（ここで初めて addEventListener）
+  // イベント配線
   btnStart.addEventListener("click", onStartClick);
+  // クリック委譲（保険）
+  titleScreen.addEventListener("click", (e)=>{
+    const btn = e.target.closest("#btnStart");
+    if(btn) onStartClick();
+  });
+  // Enter キー開始
+  titleScreen.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") onStartClick();
+  });
+  titleScreen.tabIndex = 0;
 
-  const undoBtnEl  = undoBtn;
-  const resetBtnEl = resetBtn;
-  undoBtnEl?.addEventListener("click", ()=> undo());
-  resetBtnEl?.addEventListener("click", ()=>{
+  undoBtn?.addEventListener("click", ()=> undo());
+  resetBtn?.addEventListener("click", ()=>{
     if(confirm("初期化しますか？")){ reset(); showTitle(); }
   });
 
-  // 初期化＆描画
+  // 起動
   loadLocal();
   fitBoardToViewport();
   render();
   showTitle();
+
+  // デバッグログ（必要なければ消してOK）
+  // console.log("[wire] btnStart:", !!btnStart, "side=", titleSide?.value, "lv=", titleLevel?.value);
 }
 
-// DOM完成後に boot() を保証
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", boot);
 } else {
