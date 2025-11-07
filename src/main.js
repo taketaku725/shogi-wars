@@ -12,25 +12,27 @@ const undoBtn = document.getElementById("undoBtn");
 const resetBtn = document.getElementById("resetBtn");
 const promoteDialog = document.getElementById("promoteDialog");
 const fxLayer = document.getElementById("fxLayer");
-const modeSelect  = document.getElementById("modeSelect");
-const sideSelect  = document.getElementById("sideSelect");
-const levelSelect = document.getElementById("levelSelect");
-const applyCpuBtn = document.getElementById("applyCpuBtn");
 
-/* レイアウト */
+/* タイトル画面 */
+const titleScreen = document.getElementById("titleScreen");
+const titleSide   = document.getElementById("titleSide");
+const titleLevel  = document.getElementById("titleLevel");
+const btnStart    = document.getElementById("btnStart");
+
+/* レイアウト（トップバー見切れ防止：極小画面でも安全値へ縮小） */
 function fitBoardToViewport(){
   const style = getComputedStyle(document.documentElement);
-  const topbarH = parseInt(style.getPropertyValue("--topbar-h"));
-  const handsH  = parseInt(style.getPropertyValue("--hands-h"));
-  const boardPad = parseInt(style.getPropertyValue("--board-pad") || "8");
-  const gridGap  = parseInt(style.getPropertyValue("--grid-gap") || "2");
+  const topbarH = parseInt(style.getPropertyValue("--topbar-h")) || 40;
+  const handsH  = parseInt(style.getPropertyValue("--hands-h"))  || 58;
+  const boardPad = parseInt(style.getPropertyValue("--board-pad")) || 8;
+  const gridGap  = parseInt(style.getPropertyValue("--grid-gap"))  || 2;
 
   const vw = window.innerWidth, vh = window.innerHeight;
-  const verticalAvail = vh - topbarH - (handsH * 2) - 8;
+  const verticalAvail = Math.max(140, vh - topbarH - (handsH * 2) - 8); // 余白:8
   const overhead = (boardPad * 2) + (gridGap * 8);
   const squareFromH = Math.floor((verticalAvail - overhead) / 9);
   const squareFromW = Math.floor((vw - 16 - overhead) / 9);
-  const square = Math.max(22, Math.min(squareFromH, squareFromW));
+  const square = Math.max(16, Math.min(squareFromH, squareFromW)); // 最小16pxまで下げてでも上UI死守
   document.documentElement.style.setProperty("--squarepx", square + "px");
 }
 window.addEventListener("resize", fitBoardToViewport);
@@ -39,7 +41,7 @@ window.addEventListener("orientationchange", fitBoardToViewport);
 /* 状態 */
 let state = null;
 let history = [];
-let vsCPU = false;
+let vsCPU = true;          // ← 対人戦はいったん無し
 let humanSide = SENTE;
 let cpuSide   = GOTE;
 let cpuLevel  = 2;
@@ -57,6 +59,14 @@ function freshState(){
     lastMove: null,
     selected: null,
   };
+}
+
+/* 画面遷移 */
+function showTitle(){
+  titleScreen.style.display = "flex";
+}
+function hideTitle(){
+  titleScreen.style.display = "none";
 }
 
 /* レンダリング */
@@ -101,7 +111,7 @@ function render(){
   renderHand(handGoteEl,  GOTE);
   renderHand(handSenteEl, SENTE);
 
-  updateCheckEffect(); // ★両陣営チェックに修正
+  updateCheckEffect();
 
   turnLabel.textContent = state.turn===SENTE ? "先手の手番" : "後手の手番";
 
@@ -126,7 +136,7 @@ function renderHand(el, owner){
       const cap = document.createElement("div");
       cap.className = "cap"; cap.dataset.owner = owner; cap.dataset.type = t;
       const mini = document.createElement("div"); mini.className = "mini";
-      const text = document.createElement("div"); text.textContent = t==="OU"?"王":(t==="HISHA"?"飛":t==="KAKU"?"角":t==="KIN"?"金":t==="GIN"?"銀":t==="KEI"?"桂":t==="KYO"?"香":"歩");
+      const text = document.createElement("div"); text.textContent = t==="HISHA"?"飛":t==="KAKU"?"角":t==="KIN"?"金":t==="GIN"?"銀":t==="KEI"?"桂":t==="KYO"?"香":"歩";
       text.style.position="relative"; text.style.zIndex="1";
       mini.appendChild(text);
       const num  = document.createElement("span"); num.className = "count"; num.textContent = "×"+cnt;
@@ -152,7 +162,7 @@ function highlightMoves(moves){
   }
 }
 
-/* 王手エフェクト（★両陣営チェック） */
+/* 王手エフェクト：両陣営 */
 function updateCheckEffect(){
   document.querySelectorAll(".square.incheck").forEach(el=>el.classList.remove("incheck"));
   for(const owner of [SENTE, GOTE]){
@@ -171,7 +181,7 @@ function blockHumanInput(){ boardEl.style.pointerEvents="none"; handGoteEl.style
 function allowHumanInput(){ boardEl.style.pointerEvents=""; handGoteEl.style.pointerEvents=""; handSenteEl.style.pointerEvents=""; }
 
 function onPieceClick(e){
-  if(vsCPU && state.turn===cpuSide) return;
+  if(state.turn===cpuSide) return; // CPU手番は無効
   e.stopPropagation();
   const r = parseInt(e.currentTarget.dataset.r,10);
   const c = parseInt(e.currentTarget.dataset.c,10);
@@ -193,7 +203,7 @@ function onPieceClick(e){
   }
 }
 function onSquareClick(e){
-  if(vsCPU && state.turn===cpuSide) return;
+  if(state.turn===cpuSide) return;
   const r = parseInt(e.currentTarget.dataset.r,10);
   const c = parseInt(e.currentTarget.dataset.c,10);
 
@@ -209,7 +219,7 @@ function onSquareClick(e){
   }
 }
 function onHandClick(e){
-  if(vsCPU && state.turn===cpuSide) return;
+  if(state.turn===cpuSide) return;
   const owner = e.currentTarget.dataset.owner;
   const type = e.currentTarget.dataset.type;
   if(owner !== state.turn) return;
@@ -224,7 +234,6 @@ function allLegalMovesForCurrent(){ return allLegalMovesForTurn(state); }
 function checkEndIfNoLegalMoves(){
   const legal = allLegalMovesForCurrent();
   if(legal.length===0){
-    // 王手中なら詰みエフェクト
     const king = findKing(state.board, state.turn);
     if(king && isSquareAttacked(state.board, king.r, king.c, opponent(state.turn))){
       showMateFlash();
@@ -232,7 +241,7 @@ function checkEndIfNoLegalMoves(){
   }
 }
 
-/* 成り確認ダイアログ */
+/* 成り確認 */
 function openPromoteDialog(){
   return new Promise(resolve=>{
     promoteDialog.returnValue = "";
@@ -250,7 +259,6 @@ async function doMove(mv){
   const fromP = state.board[mv.from.r][mv.from.c];
   const toP   = state.board[mv.to.r][mv.to.c];
 
-  // 成り可否・強制成り
   const inZoneFrom = (fromP.owner===SENTE ? (mv.from.r<=2) : (mv.from.r>=6));
   const inZoneTo   = (fromP.owner===SENTE ? (mv.to.r  <=2) : (mv.to.r  >=6));
   const couldPromote = !fromP.promoted && ["FU","KYO","KEI","GIN","KAKU","HISHA"].includes(fromP.type) && (inZoneFrom || inZoneTo);
@@ -319,32 +327,20 @@ function queueCpuIfNeeded(){
   cpuTimer = setTimeout(()=>{
     const mv = chooseCpuMove();
     if(!mv){
-      // 合法手無し：王手なら詰みエフェクト
       const king = findKing(state.board, cpuSide);
       const inCheck = king && isSquareAttacked(state.board, king.r, king.c, humanSide);
       if(inCheck) showMateFlash();
       allowHumanInput();
       return;
     }
-    // 任意成りは簡易評価で自動選択
-    if(!mv.drop && mv.promote===undefined){
-      const s1 = deepCopy(state); // keep
-      const s2 = deepCopy(state); // promote
-      // ここでは UI 経由せず盤だけ進める（search側のロジックと同一）
-      let m1 = {...mv, promote:false};
-      let m2 = {...mv, promote:true };
-      // evaluateはsearch側にあるが、ここでは chooseCpuMove がすでに選んでいるため省略
-      // promoteフラグは search 内でほぼ決まるが、保険で keep にしておく
-      mv.promote = mv.promote ?? false;
-    }
-    // 実行（UI経由）
     if(mv.drop) doDrop(mv); else doMove(mv);
-  }, 350);
+  }, CPU_DELAY);
 }
 
 /* Undo / Reset / 保存 */
 function pushHistory(){ history.push(JSON.stringify(state)); if(history.length>200) history.shift(); }
 function undo(){
+  if(state.turn===cpuSide) return; // CPU手番での連打ガード
   if(history.length===0) return;
   const prev = history.pop();
   state = JSON.parse(prev);
@@ -365,42 +361,39 @@ function loadLocal(){
       state = parsed.state || freshState();
       history = parsed.history || [];
       if(parsed.cpu){
-        vsCPU = !!parsed.cpu.vsCPU;
+        vsCPU = true;
         humanSide = parsed.cpu.humanSide || SENTE;
-        cpuSide   = parsed.cpu.cpuSide   || GOTE;
+        cpuSide   = (humanSide===SENTE)? GOTE : SENTE;
         cpuLevel  = parsed.cpu.cpuLevel  || 2;
       }
-      syncCpuUi();
       return;
     }
   }catch(e){}
   state = freshState();
 }
 
-/* CPU UI */
-function syncCpuUi(){
-  modeSelect.value  = vsCPU ? "cpu" : "human";
-  sideSelect.value  = (humanSide===SENTE) ? "sente" : "gote";
-  levelSelect.value = String(cpuLevel);
-}
-applyCpuBtn.addEventListener("click", ()=>{
-  vsCPU = (modeSelect.value==="cpu");
-  humanSide = (sideSelect.value==="sente") ? SENTE : GOTE;
+/* タイトル開始 */
+btnStart.addEventListener("click", ()=>{
+  humanSide = (titleSide.value === "sente") ? SENTE : GOTE;
   cpuSide   = opponent(humanSide);
-  cpuLevel  = parseInt(levelSelect.value,10) || 2;
+  cpuLevel  = parseInt(titleLevel.value,10) || 2;
+
+  history = [];
+  state = freshState();
+  state.turn = SENTE; // 先手番から開始（一般ルール）
   saveLocal();
-  if(vsCPU && state.turn===cpuSide){
-    queueCpuIfNeeded();
-  }else{
-    allowHumanInput();
-  }
+  hideTitle();
+  fitBoardToViewport(); render();
+  if(cpuSide===SENTE) queueCpuIfNeeded();
 });
 
-/* 起動 */
-undoBtn.addEventListener("click", ()=>{ if(vsCPU && state.turn===cpuSide) return; undo(); });
-resetBtn.addEventListener("click", ()=>{ if(confirm("初期化しますか？")) reset(); });
+/* プレイ画面ボタン */
+undoBtn.addEventListener("click", ()=> undo());
+resetBtn.addEventListener("click", ()=>{ if(confirm("初期化しますか？")){ reset(); showTitle(); } });
 
+/* 起動 */
 loadLocal();
 fitBoardToViewport();
 render();
-queueCpuIfNeeded();
+/* 初回は必ずタイトルを見せる（保存があっても選び直しやすく） */
+showTitle();
