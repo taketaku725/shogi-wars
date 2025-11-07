@@ -88,6 +88,12 @@ body{
   color:#e9e3d5;
 }
 
+/* タイトル表示中だけプレイ画面を隠す */
+body.show-title #app > :not(#titleScreen){ display:none !important; }
+
+/* タイトル表示が終わったらタイトルUIを隠す */
+body:not(.show-title) #titleScreen{ display:none !important; }
+
 /* ★ 武器庫スタイルの開始ボタン */
 .btn.start{
   width:100%;
