@@ -9,6 +9,7 @@
   --squarepx:48px;
   --board-pad:8px; --grid-gap:2px;
   --wood:#b48a55; --cell:#dcb878; --piece:#f1e2bf; --piece-border:#5f5335;
+  --komadai-side-w: 120px; /* 横画面時の左右の駒台幅 */
 
   /* レイアウト寸法（トップバー/駒台は固定高さ） */
   --topbar-h: 40px;
@@ -265,6 +266,48 @@ body:not(.show-title) #titleScreen{ display:none !important; }
 @media (max-width: 480px){
   :root{ --topbar-h: 38px; --hands-h: 54px; }
   .hand-title{ display:none }
+}
+
+/* --- 横画面レイアウト切替 --- */
+@media (orientation: landscape){
+  .app{
+    display: grid;
+    grid-template-columns: var(--komadai-side-w) 1fr var(--komadai-side-w);
+    grid-template-rows: var(--topbar-h) 1fr;
+    grid-template-areas:
+      "topbar topbar topbar"
+      "komadaiL board  komadaiR";
+    min-height: 100vh;
+    width: 100vw;
+  }
+
+  .topbar{ grid-area: topbar; }
+  .board-wrap{ grid-area: board; }
+
+  /* 駒台を左右へ。高さはグリッドに合わせて可変・縦スクロールのみ */
+  #handsTop{ grid-area: komadaiL; }
+  #handsBottom{ grid-area: komadaiR; }
+
+  .hands{
+    height: auto;                 /* 縦配置に合わせて自動 */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .hand-title{ text-align: center; }
+
+  /* 持ち駒“だけ”縦スクロール */
+  .hand{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    overflow: auto;              /* 必要時のみスクロールが出る */
+    max-height: 100%;
+  }
 }
 
 /* ===== タイトル画面の完全・独立表示 ===== */
