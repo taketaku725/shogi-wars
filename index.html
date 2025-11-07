@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>将棋合戦</title>
   <link rel="icon" href="./assets/favicon.ico">
   <link rel="stylesheet" href="./style.css" />
@@ -15,14 +15,14 @@
         <h1>将棋合戦</h1>
         <p class="subtitle">～ 一手は千金 ～</p>
         <div class="row">
-          <label>あなたの手番</label>
+          <label for="titleSide">あなたの手番</label>
           <select id="titleSide">
             <option value="sente">先手</option>
             <option value="gote">後手</option>
           </select>
         </div>
         <div class="row">
-          <label>CPUの強さ</label>
+          <label for="titleLevel">CPUの強さ</label>
           <select id="titleLevel">
             <option value="1">★☆☆（速い）</option>
             <option value="2" selected>★★☆（標準）</option>
